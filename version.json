@@ -1,6 +1,6 @@
 {
-  "version": "1.0.2",
-  "changelog": "• Melhorias no fechamento do sistema\n• Correção na emissão de atestados\n• Novo botão de busca rápida",
+  "version": "1.0.1",
+  "changelog": "• Sistema de atualização dinâmica\n• Remoção da trava por hardware\n• Correções nos atestados e no dashboard",
   "files": {
     "server.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/server.js",
     "app.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/app.js",
