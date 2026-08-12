@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sismatc Odonto</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦷</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <!-- Botão Hambúrguer (Mobile) -->
+    <button class="menu-toggle" id="menu-toggle" onclick="toggleSidebar()" aria-label="Abrir menu">
+        <i class="fa-solid fa-bars" id="menu-icon"></i>
+    </button>
+    <!-- Overlay escuro ao abrir o menu -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <i class="fa-solid fa-tooth splash-logo"></i>
+            <h1 class="splash-title">Sismatc Odonto</h1>
+            <div class="loader"></div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fa-solid fa-tooth"></i>
+            <span>Sismatc Odonto</span>
+        </div>
+        <nav>
+            <ul>
+                <li class="active" data-page="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</li>
+                <li data-page="nova-consulta"><i class="fa-solid fa-notes-medical"></i> Nova Consulta</li>
+                <li data-page="consultas"><i class="fa-solid fa-calendar-check"></i> Agenda / Histórico</li>
+                <li data-page="pacientes"><i class="fa-solid fa-hospital-user"></i> Pacientes</li>
+                <li data-page="procedimentos"><i class="fa-solid fa-syringe"></i> Procedimentos</li>
+                <li data-page="config"><i class="fa-solid fa-gear"></i> Configurações</li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+        <!-- Update Notification Banner -->
+        <div id="update-banner" style="display:none; background: linear-gradient(135deg, #0ca789, #08836b); color: white; padding: 12px 24px; font-weight: 600; font-size: 0.95rem; align-items: center; justify-content: space-between; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(12,167,137,0.25);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fa-solid fa-cloud-arrow-down" style="font-size:1.3rem;"></i>
+                <span><strong>Nova atualização disponível!</strong> <span id="update-banner-version"></span></span>
+            </div>
+            <button onclick="abrirModalAtualizacao()" style="background: white; color: #0ca789; border: none; padding: 7px 18px; border-radius: 20px; font-weight: 700; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                <i class="fa-solid fa-download"></i> Ver Novidades & Atualizar
+            </button>
+        </div>
+        
+        <!-- DASHBOARD -->
+        <section id="dashboard" class="page active">
+            <header>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h1>Dashboard</h1>
+                        <p id="dash-subtitle">Resumo da sua clínica</p>
+                    </div>
+                    <button class="btn" onclick="showMobileAccess()" style="background-color: var(--text-main); color: var(--white); box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 8px;">
+                        <i class="fa-solid fa-qrcode"></i> Acesso Mobile
+                    </button>
+                </div>
+            </header>
+
+            <div class="filter-bar">
+                <label>Filtrar por data:</label>
+                <input type="date" id="dash-date-start">
+                <span>até</span>
+                <input type="date" id="dash-date-end">
+                <button class="btn btn-primary" onclick="loadDashboard()"><i class="fa-solid fa-filter"></i> Filtrar</button>
+                <button class="btn btn-secondary" onclick="limparFiltroDashboard()" style="margin-left: 5px;"><i class="fa-solid fa-rotate-left"></i> Ver Todos</button>
+            </div>
+            
+            <div class="kpi-cards">
+                <div class="card">
+                    <div class="card-icon blue"><i class="fa-solid fa-calendar-day"></i></div>
+                    <div class="card-info">
+                        <h3>Consultas no Período</h3>
+                        <p id="kpi-consultas">0</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon green"><i class="fa-solid fa-check-circle"></i></div>
+                    <div class="card-info">
+                        <h3>Realizadas</h3>
+                        <p id="kpi-realizadas">0</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon purple"><i class="fa-solid fa-users"></i></div>
+                    <div class="card-info">
+                        <h3>Total de Pacientes</h3>
+                        <p id="kpi-pacientes">0</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-icon orange"><i class="fa-solid fa-brazilian-real-sign"></i></div>
+                    <div class="card-info">
+                        <h3>Faturamento</h3>
+                        <p id="kpi-faturamento">R$ 0,00</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <h2>Consultas Recentes</h2>
+                <table id="table-dashboard">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Paciente</th>
+                            <th>Status</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- NOVA CONSULTA -->
+        <section id="nova-consulta" class="page hidden">
+            <header>
+                <h1>Nova Consulta / Orçamento</h1>
+                <p>Registre procedimentos e gere recibos para o paciente.</p>
+            </header>
+
+            <div class="form-container">
+                <form id="form-consulta">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Paciente</label>
+                            <select id="cons-paciente" onchange="onPacienteSelect(this)" required>
+                                <option value="">-- Selecione o Paciente --</option>
+                            </select>
+                            <input type="text" id="cons-paciente-custom" placeholder="Nome do novo paciente" style="margin-top:6px; display:none;">
+                            <!-- Hidden ID store -->
+                            <input type="hidden" id="cons-paciente-id">
+                        </div>
+                        <div class="form-group">
+                            <label>Telefone / WhatsApp</label>
+                            <input type="text" id="cons-telefone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>CPF / RG</label>
+                            <input type="text" id="cons-cpf">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Data Nascimento</label>
+                            <input type="date" id="cons-nascimento">
+                        </div>
+                        <div class="form-group">
+                            <label>Alergias / Condições Pré-existentes</label>
+                            <input type="text" id="cons-alergias" placeholder="Ex: Alergia a Dipirona">
+                        </div>
+                        <div class="form-group">
+                            <label>Data da Consulta</label>
+                            <input type="date" id="cons-data-dia" onchange="loadSlotsNovaConsulta()" required>
+                            <input type="hidden" id="cons-data" required>
+                        </div>
+                    </div>
+
+                    <!-- Grade de Horários -->
+                    <div id="nova-consulta-slots-wrapper" style="margin-bottom:20px; display:none;">
+                        <label style="font-weight:600; margin-bottom:8px; display:block;"><i class="fa-solid fa-clock"></i> Horário Disponível</label>
+                        <div id="nova-consulta-slots" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(90px,1fr)); gap:10px;"></div>
+                    </div>
+                    
+                    <div id="procedimentos-container">
+                        <div class="form-row item-row">
+                            <div class="form-group" style="flex: 0.6;">
+                                <label>Procedimento</label>
+                                <select class="cons-item-nome" onchange="onProcedimentoSelect(this)" required>
+                                    <option value="">-- Selecione um procedimento --</option>
+                                </select>
+                                <input type="text" class="cons-item-nome-custom" placeholder="Nome do procedimento" style="margin-top:6px; display:none;">
+                            </div>
+                            <div class="form-group" style="flex: 0.2;">
+                                <label>Preço (R$)</label>
+                                <input type="number" step="0.01" class="cons-item-preco" required placeholder="0.00" oninput="calculateTotal()">
+                            </div>
+                            <div class="form-group" style="flex: 0.1; display: flex; align-items: flex-end;">
+                                <button type="button" class="btn btn-secondary" style="color: var(--accent-red); padding: 0.8rem;" disabled><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <button type="button" class="btn btn-secondary" onclick="addProcedimentoRow()"><i class="fa-solid fa-plus"></i> Adicionar Procedimento</button>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select id="cons-status">
+                                <option value="Agendado">Agendado</option>
+                                <option value="Em Andamento">Em Andamento</option>
+                                <option value="Realizado">Realizado</option>
+                                <option value="Finalizado">Finalizado</option>
+                                <option value="Cancelado">Cancelado</option>
+                                <option value="Faltou">Faltou</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Garantia / Retorno</label>
+                            <input type="text" id="cons-garantia" placeholder="Ex: Retorno em 15 dias">
+                        </div>
+                        <div class="form-group">
+                            <label>Valor Total (R$)</label>
+                            <input type="number" step="0.01" id="cons-total" readonly placeholder="0.00" style="background: #f4f8f8; font-weight: bold;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Observações Clínicas</label>
+                        <textarea id="cons-obs" rows="3" placeholder="Anotações do prontuário..."></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Salvar Consulta</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetFormConsulta()"><i class="fa-solid fa-eraser"></i> Limpar</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- AGENDA / CONSULTAS -->
+        <section id="consultas" class="page hidden">
+            <header>
+                <h1>Agenda e Histórico de Consultas</h1>
+                <p>Veja todas as consultas marcadas e realizadas.</p>
+            </header>
+
+            <div class="filter-bar">
+                <label>Data:</label>
+                <input type="date" id="agenda-filtro-data">
+                <label>Status:</label>
+                <select id="agenda-filtro-status">
+                    <option value="">Todos</option>
+                    <option value="Agendado">Agendado</option>
+                    <option value="Em Andamento">Em Andamento</option>
+                    <option value="Realizado">Realizado</option>
+                    <option value="Finalizado">Finalizado</option>
+                    <option value="Cancelado">Cancelado</option>
+                    <option value="Faltou">Faltou</option>
+                </select>
+                <button class="btn btn-primary" onclick="loadConsultas()"><i class="fa-solid fa-filter"></i> Filtrar</button>
+                <button class="btn btn-secondary" onclick="limparFiltroAgenda()"><i class="fa-solid fa-rotate-left"></i> Limpar</button>
+            </div>
+
+            <div class="table-container">
+                <table id="table-todas-consultas">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Data/Hora</th>
+                            <th>Paciente</th>
+                            <th>Status</th>
+                            <th>Valor</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <p id="agenda-sem-resultado" style="display:none; text-align:center; padding:30px; color:var(--text-light);"><i class="fa-solid fa-calendar-xmark" style="font-size:2rem; margin-bottom:10px; display:block;"></i>Nenhuma consulta encontrada para os filtros selecionados.</p>
+            </div>
+        </section>
+
+        <section id="pacientes" class="page hidden">
+            <header>
+                <h1>Cadastro de Pacientes</h1>
+                <p>Gerencie o prontuário dos pacientes.</p>
+            </header>
+
+            <div class="form-container">
+                <form id="form-paciente">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nome Completo</label>
+                            <input type="text" id="pac-nome" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Telefone / WhatsApp</label>
+                            <input type="text" id="pac-telefone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>CPF</label>
+                            <input type="text" id="pac-cpf">
+                        </div>
+                        <div class="form-group">
+                            <label>Data Nascimento</label>
+                            <input type="date" id="pac-nascimento">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Alergias / Condições Pré-existentes</label>
+                            <input type="text" id="pac-alergias" placeholder="Ex: Alergia a Dipirona, Hipertenso">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Histórico Médico (Anamnese)</label>
+                        <textarea id="pac-historico" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Salvar Paciente</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-container">
+                <table id="table-pacientes">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Telefone</th>
+                            <th>CPF</th>
+                            <th>Alergias</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- PROCEDIMENTOS -->
+        <section id="procedimentos" class="page hidden">
+            <header>
+                <h1>Procedimentos Odontológicos</h1>
+                <p>Tabela de preços base para os serviços da clínica.</p>
+            </header>
+
+            <div class="form-container">
+                <form id="form-procedimento">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 0.7;">
+                            <label>Nome do Procedimento</label>
+                            <input type="text" id="proc-nome" required>
+                        </div>
+                        <div class="form-group" style="flex: 0.3;">
+                            <label>Preço (R$)</label>
+                            <input type="number" step="0.01" id="proc-preco" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição</label>
+                        <input type="text" id="proc-desc">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Adicionar Procedimento</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-container">
+                <table id="table-procedimentos">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                            <th>Preço</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- CONFIGURACOES -->
+        <section id="config" class="page hidden">
+            <header>
+                <h1>Configurações da Clínica</h1>
+                <p>Dados para o cabeçalho dos recibos e orçamentos.</p>
+            </header>
+
+            <div class="form-container">
+                <form id="form-config">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 0.7;">
+                            <label>Nome da Clínica</label>
+                            <input type="text" id="cfg-nome" placeholder="Ex: Sorriso Feliz">
+                        </div>
+                        <div class="form-group" style="flex: 0.3;">
+                            <label>Telefone Comercial</label>
+                            <input type="text" id="cfg-telefone">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Endereço Completo</label>
+                            <input type="text" id="cfg-endereco">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Dentista Responsável</label>
+                            <input type="text" id="cfg-resp">
+                        </div>
+                        <div class="form-group">
+                            <label>CRO</label>
+                            <input type="text" id="cfg-cro" placeholder="Ex: 123456-SP">
+                        </div>
+                    </div>
+
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border);">
+                    <h3 style="margin-bottom: 15px; color: var(--primary);"><i class="fa-solid fa-clock"></i> Horários de Atendimento</h3>
+                    <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 15px;">Configure os horários para o agendamento automático de retorno (Seg–Sex).</p>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Horário Início</label>
+                            <input type="time" id="cfg-horario-inicio" value="08:00">
+                        </div>
+                        <div class="form-group">
+                            <label>Horário Fim</label>
+                            <input type="time" id="cfg-horario-fim" value="18:00">
+                        </div>
+                        <div class="form-group">
+                            <label>Duração por Consulta</label>
+                            <select id="cfg-intervalo">
+                                <option value="30">30 minutos</option>
+                                <option value="45">45 minutos</option>
+                                <option value="60" selected>1 hora</option>
+                                <option value="90">1h 30min</option>
+                                <option value="120">2 horas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr style="margin: 25px 0; border: none; border-top: 1px solid var(--border);">
+                    <h3 style="margin-bottom: 15px; color: var(--primary);"><i class="fa-solid fa-cloud-arrow-up"></i> Atualizações do Sistema</h3>
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-body, #f8f9fa); padding: 15px 20px; border-radius: 10px; border: 1px solid var(--border, #e9ecef);">
+                        <div>
+                            <p style="margin: 0; color: var(--text-dark, #2c3e50); font-weight: 600;">Sismatc Odonto</p>
+                            <p style="margin: 3px 0 0 0; color: var(--text-light, #7f8c8d); font-size: 0.88rem;">Versão instalada: <strong id="cfg-versao-atual" style="color:var(--primary);">v1.0.0</strong></p>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="checkSystemUpdates(true)"><i class="fa-solid fa-arrows-rotate"></i> Checar Atualizações</button>
+                    </div>
+
+                    <div class="form-actions" style="margin-top: 25px;">
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Salvar Configurações</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+        
+    </main>
+
+    <!-- Modal Receita/Recibo PDF -->
+    <div id="print-area" style="display: none; padding: 40px; background: white; color: black; width: 100%; max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif;">
+        <!-- Filled by JS -->
+    </div>
+
+    <!-- MODAL ATUALIZAÇÃO -->
+    <div id="modal-update" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:10010; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:white; border-radius:16px; max-width:520px; width:100%; padding:28px; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative; animation:fadeInUp 0.25s ease;">
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
+                <div style="width:52px; height:52px; background:#e8f8f5; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="fa-solid fa-rocket" style="font-size:1.6rem; color:#0ca789;"></i>
+                </div>
+                <div>
+                    <h2 style="margin:0; font-size:1.3rem; color:#2c3e50;">Atualização Disponível!</h2>
+                    <p style="margin:2px 0 0; color:#7f8c8d; font-size:0.9rem;">Versão <strong id="modal-update-version">1.1.0</strong> pronta para instalar.</p>
+                </div>
+            </div>
+
+            <div style="background:#f8f9fa; border-radius:10px; padding:16px; margin-bottom:20px; max-height:180px; overflow-y:auto; border:1px solid #e9ecef;">
+                <h4 style="margin:0 0 8px; color:#34495e; font-size:0.95rem;"><i class="fa-solid fa-list-check"></i> O que há de novo:</h4>
+                <p id="modal-update-changelog" style="margin:0; color:#555; font-size:0.9rem; line-height:1.5; white-space:pre-line;"></p>
+            </div>
+
+            <div id="update-progress-container" style="display:none; margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; font-weight:600; font-size:0.88rem; color:#34495e; margin-bottom:6px;">
+                    <span id="update-status-text">Baixando e aplicando arquivos...</span>
+                </div>
+                <div style="width:100%; height:10px; background:#e0e0e0; border-radius:10px; overflow:hidden;">
+                    <div id="update-progress-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #0ca789, #2ecc71); transition:width 0.3s;"></div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button id="btn-cancel-update" onclick="document.getElementById('modal-update').style.display='none'" style="padding:12px 20px; background:#f1f3f5; color:#2c3e50; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
+                    Depois
+                </button>
+                <button id="btn-start-update" onclick="applySystemUpdate()" style="padding:12px 24px; background:#0ca789; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> Atualizar Agora
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Agendamento de Retorno -->
+    <div id="modal-retorno" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10001; align-items:center; justify-content:center; padding:15px;">
+        <div style="background:white; border-radius:16px; max-width:520px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); padding:20px 25px; border-radius:16px 16px 0 0; color:white;">
+                <h2 style="margin:0; font-size:1.3rem;"><i class="fa-solid fa-calendar-plus"></i> Agendar Retorno</h2>
+                <p id="modal-retorno-paciente" style="margin:5px 0 0; opacity:0.85; font-size:0.9rem;"></p>
+            </div>
+            <div style="padding:25px;">
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label>Selecione a Data (apenas dias úteis)</label>
+                    <input type="date" id="retorno-data" onchange="loadSlotsRetorno()" style="width:100%;">
+                </div>
+                <div id="retorno-slots-container" style="margin-bottom:20px;">
+                    <p style="color:var(--text-light); text-align:center; padding:20px;"><i class="fa-solid fa-calendar-day"></i> Selecione uma data para ver os horários disponíveis</p>
+                </div>
+                <input type="hidden" id="retorno-consulta-id">
+                <input type="hidden" id="retorno-hora-selecionada">
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-primary" onclick="confirmarRetorno()" style="flex:1; justify-content:center;"><i class="fa-solid fa-check"></i> Confirmar Retorno</button>
+                    <button class="btn btn-secondary" onclick="fecharModalRetorno()" style="flex:1; justify-content:center;"><i class="fa-solid fa-xmark"></i> Sem Retorno</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Datalists -->
+    <datalist id="pacientes-list"></datalist>
+    <datalist id="procedimentos-list"></datalist>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // ====================================================
+        //  MENU MOBILE — Hambúrguer
+        // ====================================================
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const icon = document.getElementById('menu-icon');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+            icon.className = sidebar.classList.contains('open')
+                ? 'fa-solid fa-xmark'
+                : 'fa-solid fa-bars';
+        }
+
+        function closeSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const icon = document.getElementById('menu-icon');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+            icon.className = 'fa-solid fa-bars';
+        }
+
+        // Fechar menu ao clicar num item da navegação (mobile)
+        document.querySelectorAll('.sidebar nav ul li').forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) closeSidebar();
+            });
+        });
+    </script>
+</body>
+</html>
