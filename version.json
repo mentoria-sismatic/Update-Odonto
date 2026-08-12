@@ -1,0 +1,10 @@
+{
+  "version": "1.0.0",
+  "changelog": "Versão inicial do Sismatc Odonto.",
+  "files": {
+    "server.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/server.js",
+    "app.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/app.js",
+    "index.html": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/index.html",
+    "style.css": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/style.css"
+  }
+}
