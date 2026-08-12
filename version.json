@@ -1,10 +1,11 @@
 {
-  "version": "1.0.1",
-  "changelog": "Versão inicial do Sismatc Odonto.",
+  "version": "1.0.2",
+  "changelog": "• Melhorias no fechamento do sistema\n• Correção na emissão de atestados\n• Novo botão de busca rápida",
   "files": {
-    "server.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/server.js",
-    "app.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/app.js",
-    "index.html": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/index.html",
-    "style.css": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/style.css"
+    "server.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/server.js",
+    "app.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/app.js",
+    "index.html": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/index.html",
+    "style.css": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/style.css"
   }
 }
+
