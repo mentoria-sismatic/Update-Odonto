@@ -383,10 +383,18 @@ app.get('/api/slots', (req, res) => {
 // ====================================================
 //   SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA VIA NUVEM
 // ====================================================
-const CURRENT_VERSION = '1.0.0';
+const UPDATE_SERVER_URL = 'https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/version.json';
 
-// URL INTERNA FIXA DO SEU SERVIDOR / GITHUB (O cliente não tem acesso para alterar)
-const UPDATE_SERVER_URL = 'https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/version.json';
+function getLocalVersion() {
+    try {
+        const pkgPath = path.join(__dirname, 'package.json');
+        if (fs.existsSync(pkgPath)) {
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+            if (pkg.version) return pkg.version;
+        }
+    } catch (e) {}
+    return '1.0.0';
+}
 
 function isNewerVersion(current, latest) {
     if (!current || !latest) return false;
@@ -401,58 +409,64 @@ function isNewerVersion(current, latest) {
     return false;
 }
 
-app.get('/api/check-update', (req, res) => {
-    const checkUrl = UPDATE_SERVER_URL;
-    const https = require('https');
-    const http = require('http');
-    const client = checkUrl.startsWith('https') ? https : http;
+function fetchRemoteFile(urlStr) {
+    return new Promise((resolve, reject) => {
+        const https = require('https');
+        const http = require('http');
+        
+        const sep = urlStr.includes('?') ? '&' : '?';
+        const fullUrl = urlStr + sep + 't=' + Date.now();
 
-    const reqRemote = client.get(checkUrl, (remoteRes) => {
-        if (remoteRes.statusCode !== 200) {
-            return res.json({ currentVersion: CURRENT_VERSION, latestVersion: CURRENT_VERSION, hasUpdate: false });
-        }
-        let data = '';
-        remoteRes.on('data', chunk => { data += chunk; });
-        remoteRes.on('end', () => {
-            try {
-                const info = JSON.parse(data);
-                const latestVersion = info.version || CURRENT_VERSION;
-                const hasUpdate = isNewerVersion(CURRENT_VERSION, latestVersion);
-                
-                res.json({
-                    currentVersion: CURRENT_VERSION,
-                    latestVersion: latestVersion,
-                    hasUpdate: hasUpdate,
-                    changelog: info.changelog || 'Melhorias de desempenho e estabilidade.',
-                    files: info.files || null,
-                    downloadUrl: info.downloadUrl || null
-                });
-            } catch (e) {
-                res.json({ currentVersion: CURRENT_VERSION, latestVersion: CURRENT_VERSION, hasUpdate: false });
-            }
+        const get = (targetUrl, hops = 0) => {
+            if (hops > 5) return reject(new Error('Muitos redirecionamentos'));
+            const client = targetUrl.startsWith('https') ? https : http;
+            const req = client.get(targetUrl, (res) => {
+                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                    return get(res.headers.location, hops + 1);
+                }
+                if (res.statusCode !== 200) {
+                    return reject(new Error('Status ' + res.statusCode));
+                }
+                let body = '';
+                res.on('data', chunk => body += chunk);
+                res.on('end', () => resolve(body));
+            });
+            req.on('error', reject);
+            req.setTimeout(6000, () => { req.destroy(); reject(new Error('Timeout')); });
+        };
+        get(fullUrl);
+    });
+}
+
+app.get('/api/check-update', async (req, res) => {
+    const currentVer = getLocalVersion();
+    try {
+        const data = await fetchRemoteFile(UPDATE_SERVER_URL);
+        const info = JSON.parse(data);
+        const latestVersion = info.version || currentVer;
+        const hasUpdate = isNewerVersion(currentVer, latestVersion);
+        
+        res.json({
+            currentVersion: currentVer,
+            latestVersion: latestVersion,
+            hasUpdate: hasUpdate,
+            changelog: info.changelog || 'Melhorias de desempenho e estabilidade.',
+            files: info.files || null,
+            downloadUrl: info.downloadUrl || null
         });
-    });
-
-    reqRemote.on('error', () => {
-        res.json({ currentVersion: CURRENT_VERSION, latestVersion: CURRENT_VERSION, hasUpdate: false });
-    });
-
-    reqRemote.setTimeout(4000, () => {
-        reqRemote.destroy();
-        res.json({ currentVersion: CURRENT_VERSION, latestVersion: CURRENT_VERSION, hasUpdate: false });
-    });
+    } catch (err) {
+        console.error('Check update error:', err.message);
+        res.json({ currentVersion: currentVer, latestVersion: currentVer, hasUpdate: false });
+    }
 });
 
 app.post('/api/apply-update', async (req, res) => {
-    const { files } = req.body;
+    const { files, version } = req.body;
     if (!files || typeof files !== 'object') {
         return res.status(400).json({ error: 'Nenhum arquivo fornecido para atualização.' });
     }
 
     try {
-        const https = require('https');
-        const http = require('http');
-
         const updatedFiles = [];
         const allowedFiles = ['server.js', 'app.js', 'index.html', 'style.css'];
 
@@ -460,24 +474,29 @@ app.post('/api/apply-update', async (req, res) => {
             if (!allowedFiles.includes(filename)) continue;
 
             const targetPath = path.join(__dirname, filename);
-            const client = url.startsWith('https') ? https : http;
+            try {
+                const content = await fetchRemoteFile(url);
+                if (content && content.length > 30) {
+                    fs.writeFileSync(targetPath, content, 'utf8');
+                    updatedFiles.push(filename);
+                }
+            } catch (errFile) {
+                console.error(`Erro ao atualizar ${filename}:`, errFile.message);
+            }
+        }
 
-            await new Promise((resolve) => {
-                const reqFile = client.get(url, (fileRes) => {
-                    if (fileRes.statusCode !== 200) return resolve();
-                    let content = '';
-                    fileRes.on('data', chunk => content += chunk);
-                    fileRes.on('end', () => {
-                        if (content && content.length > 30) {
-                            fs.writeFileSync(targetPath, content, 'utf8');
-                            updatedFiles.push(filename);
-                        }
-                        resolve();
-                    });
-                });
-                reqFile.on('error', () => resolve());
-                reqFile.setTimeout(10000, () => { reqFile.destroy(); resolve(); });
-            });
+        // Atualizar versão em package.json
+        if (version) {
+            try {
+                const pkgPath = path.join(__dirname, 'package.json');
+                if (fs.existsSync(pkgPath)) {
+                    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+                    pkg.version = version;
+                    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf8');
+                }
+            } catch (errPkg) {
+                console.error('Erro ao atualizar package.json:', errPkg.message);
+            }
         }
 
         res.json({
