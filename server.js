@@ -135,41 +135,16 @@ app.get('/api/timestamp', (req, res) => {
 });
 
 // ====================================================
-//   HEARTBEAT WATCHDOG (encerra Node se nenhum navegador estiver aberto)
 // ====================================================
-let lastHeartbeat = Date.now();
-const HEARTBEAT_TIMEOUT_MS = 15000; // 15 segundos sem pulso = encerrar
-
+//   SERVER MONITORING (MANTÉM O SERVIDOR SEMPRE ATIVO)
+// ====================================================
 app.post('/api/heartbeat', (req, res) => {
-    lastHeartbeat = Date.now();
     res.json({ ok: true });
 });
 
-// Endpoint de desligamento imediato (chamado pelo navigator.sendBeacon ao fechar o browser)
 app.post('/api/shutdown', (req, res) => {
-    console.log('Sinal de fechamento do navegador recebido.');
     res.json({ ok: true });
-    
-    // Se não houver outro heartbeat em 15s, desliga o servidor
-    lastHeartbeat = 0;
 });
-
-setInterval(() => {
-    if (lastHeartbeat !== 0 && Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
-        console.log('[Sismatc] Todos os navegadores fechados. Encerrando servidor...');
-        db.close(() => process.exit(0));
-    }
-    if (lastHeartbeat === 0 && Date.now() > HEARTBEAT_TIMEOUT_MS) {
-        // lastHeartbeat foi zerado pelo shutdown — aguardar 15s por outro cliente
-        setTimeout(() => {
-            if (lastHeartbeat === 0 || Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
-                console.log('[Sismatc] Sem clientes ativos. Encerrando...');
-                db.close(() => process.exit(0));
-            }
-        }, HEARTBEAT_TIMEOUT_MS);
-        lastHeartbeat = -1; // evitar múltiplos timers
-    }
-}, 5000);
 
 // ====================================================
 //   ROTAS PACIENTES
