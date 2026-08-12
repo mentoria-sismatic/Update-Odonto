@@ -79,13 +79,7 @@ function setupNavigation() {
 // ---- HEARTBEAT ----
 function setupHeartbeat() {
     const send = () => fetch(`${API_URL}/heartbeat`, { method: 'POST', cache: 'no-store' }).catch(() => {});
-    send(); // enviar imediatamente ao abrir
-    setInterval(send, 5000); // pulsar a cada 5 segundos
-
-    // Ao fechar aba/navegador: avisar servidor para iniciar contagem regressiva
-    window.addEventListener('beforeunload', () => {
-        navigator.sendBeacon(`${API_URL}/shutdown`);
-    });
+    send();
 }
 
 // ---- REAL-TIME (POLLING) ----
