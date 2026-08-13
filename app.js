@@ -1187,7 +1187,10 @@ async function applySystemUpdate() {
         const res = await fetch(`${API_URL}/apply-update`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ files: _latestUpdateData.files })
+            body: JSON.stringify({
+                files: _latestUpdateData.files,
+                version: _latestUpdateData.latestVersion
+            })
         });
         const result = await res.json();
 

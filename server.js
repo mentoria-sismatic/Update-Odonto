@@ -334,7 +334,7 @@ app.get('/api/slots', (req, res) => {
             slots.push(toStr(m));
         }
 
-        // Buscar horários já ocupados na data
+        // Buscar hor��rios já ocupados na data
         db.all(
             `SELECT data_consulta FROM consultas WHERE date(data_consulta) = ? AND status NOT IN ('Cancelado','Faltou')`,
             [data],
@@ -388,28 +388,57 @@ function fetchRemoteFile(urlStr) {
     return new Promise((resolve, reject) => {
         const https = require('https');
         const http = require('http');
-        
-        const sep = urlStr.includes('?') ? '&' : '?';
-        const fullUrl = urlStr + sep + 't=' + Date.now();
 
-        const get = (targetUrl, hops = 0) => {
-            if (hops > 5) return reject(new Error('Muitos redirecionamentos'));
-            const client = targetUrl.startsWith('https') ? https : http;
-            const req = client.get(targetUrl, (res) => {
-                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    return get(res.headers.location, hops + 1);
+        // Tentar GitHub API instantânea para ignorar 5 min de cache CDN
+        const match = urlStr.match(/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)\/(.+)/);
+        if (match) {
+            const [, owner, repo, branch, filePath] = match;
+            const apiUrl = 'https://api.github.com/repos/' + owner + '/' + repo + '/contents/' + filePath + '?ref=' + branch;
+            const req = https.get(apiUrl, { headers: { 'User-Agent': 'Sismatc-Odonto-Updater' } }, (res) => {
+                if (res.statusCode === 200) {
+                    let body = '';
+                    res.on('data', chunk => body += chunk);
+                    res.on('end', () => {
+                        try {
+                            const json = JSON.parse(body);
+                            if (json.content) return resolve(Buffer.from(json.content, 'base64').toString('utf8'));
+                        } catch (e) {}
+                        fallbackGet();
+                    });
+                    return;
                 }
-                if (res.statusCode !== 200) {
-                    return reject(new Error('Status ' + res.statusCode));
-                }
-                let body = '';
-                res.on('data', chunk => body += chunk);
-                res.on('end', () => resolve(body));
+                fallbackGet();
             });
-            req.on('error', reject);
-            req.setTimeout(6000, () => { req.destroy(); reject(new Error('Timeout')); });
-        };
-        get(fullUrl);
+            req.on('error', fallbackGet);
+            req.setTimeout(4000, fallbackGet);
+            return;
+        }
+
+        fallbackGet();
+
+        function fallbackGet() {
+            const sep = urlStr.includes('?') ? '&' : '?';
+            const fullUrl = urlStr + sep + 't=' + Date.now();
+
+            const get = (targetUrl, hops = 0) => {
+                if (hops > 5) return reject(new Error('Muitos redirecionamentos'));
+                const client = targetUrl.startsWith('https') ? https : http;
+                const req = client.get(targetUrl, (res) => {
+                    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                        return get(res.headers.location, hops + 1);
+                    }
+                    if (res.statusCode !== 200) {
+                        return reject(new Error('Status ' + res.statusCode));
+                    }
+                    let body = '';
+                    res.on('data', chunk => body += chunk);
+                    res.on('end', () => resolve(body));
+                });
+                req.on('error', reject);
+                req.setTimeout(6000, () => { req.destroy(); reject(new Error('Timeout')); });
+            };
+            get(fullUrl);
+        }
     });
 }
 
@@ -436,7 +465,7 @@ app.get('/api/check-update', async (req, res) => {
 });
 
 app.post('/api/apply-update', async (req, res) => {
-    const { files, version } = req.body;
+    let { files, version } = req.body;
     if (!files || typeof files !== 'object') {
         return res.status(400).json({ error: 'Nenhum arquivo fornecido para atualização.' });
     }
@@ -458,6 +487,17 @@ app.post('/api/apply-update', async (req, res) => {
             } catch (errFile) {
                 console.error(`Erro ao atualizar ${filename}:`, errFile.message);
             }
+        }
+
+        // Se a versão não veio no req.body, busca no version.json do servidor
+        if (!version) {
+            try {
+                const remoteData = await fetchRemoteFile(UPDATE_SERVER_URL);
+                const remoteInfo = JSON.parse(remoteData);
+                if (remoteInfo && remoteInfo.version) {
+                    version = remoteInfo.version;
+                }
+            } catch (e) {}
         }
 
         // Atualizar versão em package.json
