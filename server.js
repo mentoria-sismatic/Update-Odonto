@@ -358,7 +358,7 @@ app.get('/api/slots', (req, res) => {
 // ====================================================
 //   SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA VIA NUVEM
 // ====================================================
-const UPDATE_SERVER_URL = 'https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/version.json';
+const UPDATE_SERVER_URL = 'https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/version.json';
 
 function getLocalVersion() {
     try {
@@ -442,11 +442,64 @@ function fetchRemoteFile(urlStr) {
     });
 }
 
+const GITHUB_REPO_RELEASES_URL = 'https://api.github.com/repos/mentoria-sismatic/Update-Odonto/releases/latest';
+
+function fetchLatestRelease() {
+    return new Promise((resolve, reject) => {
+        const https = require('https');
+        const req = https.get(GITHUB_REPO_RELEASES_URL, { headers: { 'User-Agent': 'Sismatc-Odonto-Updater' } }, (res) => {
+            if (res.statusCode !== 200) return reject(new Error('Status ' + res.statusCode));
+            let body = '';
+            res.on('data', chunk => body += chunk);
+            res.on('end', () => {
+                try {
+                    const data = JSON.parse(body);
+                    const tag = (data.tag_name || '').replace(/^v/i, '');
+                    if (!tag) return reject(new Error('Tag inválida'));
+                    
+                    const files = {
+                        "server.js": `https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/${data.tag_name}/server.js`,
+                        "app.js": `https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/${data.tag_name}/app.js`,
+                        "index.html": `https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/${data.tag_name}/index.html`,
+                        "style.css": `https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/${data.tag_name}/style.css`
+                    };
+
+                    if (data.assets && Array.isArray(data.assets)) {
+                        data.assets.forEach(asset => {
+                            if (files[asset.name]) {
+                                files[asset.name] = asset.browser_download_url;
+                            }
+                        });
+                    }
+
+                    resolve({
+                        version: tag,
+                        changelog: data.body || 'Nova atualização lançada via GitHub Releases.',
+                        files: files
+                    });
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        });
+        req.on('error', reject);
+        req.setTimeout(5000, () => { req.destroy(); reject(new Error('Timeout')); });
+    });
+}
+
 app.get('/api/check-update', async (req, res) => {
     const currentVer = getLocalVersion();
     try {
-        const data = await fetchRemoteFile(UPDATE_SERVER_URL);
-        const info = JSON.parse(data);
+        let info = null;
+        // 1. Tentar buscar da API de Releases do GitHub (Instantâneo)
+        try {
+            info = await fetchLatestRelease();
+        } catch (errRel) {
+            // 2. Fallback: Se não houver Releases publicadas, busca o version.json
+            const data = await fetchRemoteFile(UPDATE_SERVER_URL);
+            info = JSON.parse(data);
+        }
+
         const latestVersion = info.version || currentVer;
         const hasUpdate = isNewerVersion(currentVer, latestVersion);
         

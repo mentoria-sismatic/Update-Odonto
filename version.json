@@ -1,10 +1,10 @@
 {
-  "version": "1.1.3",
-  "changelog": "• Sistema de atualização dinâmica via nuvem\n• Remoção da trava de licença por hardware\n• Correções na emissão de atestados (nome da clínica e endereço)\n• Correção nos atendimentos e botão Ver Todos no Dashboard",
+  "version": "1.1.4",
+  "changelog": "• ⚡ Novo motor de atualizações instantâneas via nuvem\n• 🔄 Correção no salvamento permanente da versão no sistema\n• 🩺 Otimizações de desempenho e estabilidade geral",
   "files": {
-    "server.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/server.js",
-    "app.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/app.js",
-    "index.html": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/index.html",
-    "style.css": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/master/style.css"
+    "server.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/server.js",
+    "app.js": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/app.js",
+    "index.html": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/index.html",
+    "style.css": "https://raw.githubusercontent.com/mentoria-sismatic/Update-Odonto/main/style.css"
   }
 }
